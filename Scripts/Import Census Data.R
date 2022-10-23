@@ -5,8 +5,9 @@ library(tidyverse)
 
 # LOAD API VALUES
 source("API_Information.R")
+source("Scripts/baseFunctions.R")
 
-# DOWNLOAD ZIP CODE TO TRACK CONVERSION FROM HUD.GOV
+# DOWNLOAD ZIP CODE TO TRACK CONVERSION FROM HUD.GOV ####
 tract_type = '1'
 tract_query = 'All'
 tract_url <- paste0("https://www.huduser.gov/hudapi/public/usps?type=", tract_type, "&query=", tract_query)
@@ -30,13 +31,16 @@ zip_tract.df <- do.call(rbind, lapply(zip_tract_char, as.data.frame)) %>%
          City, 
          State)
 
-# LOAD VARIABLES FOR ACS5 DATA (2020)
+## CHANGE INDEX TO NUMERIC {OPTIONAL: not necessary, just table aestetics}
+rownames(zip_tract.df) <- NULL
+
+# LOAD VARIABLES FOR ACS5 DATA (2020) ####
 v20 <- load_variables(2020, "acs5", cache = T)
 
-# LOAD STATE ABBREVIATIONS
+# LOAD STATE ABBREVIATIONS ####
 states <- state.abb
 
-# VARIABLES TO GET FROM CENSUS
+# VARIABLES TO GET FROM CENSUS ####
 variables_to_get <- c(
   median_home_value = "B25077_001",
   median_income = "DP03_0062",
@@ -49,18 +53,25 @@ variables_to_get <- c(
   percent_ooh = "DP04_0046P"
 )
 
-## TESTING TO SEE IF DATA DOWNLOADS
+## TODO:: CREATE FUNCTION TO ITERATE OVER STATES WITH THE DECLARED VARIABLES (variables_to_get) ####
 
-medianIncome <- get_acs(geography = "tract", 
-              variables = c(medincome = "B19013_001"), 
-              year = 2020)
+# Complete
 
-giniIndex <- get_acs(geography = "tract",
-                     variables = c(giniIndex = "B19083_001"),
-                     year = 2020,
-                     output = "wide")
+# IMPORT ALL STATES DATA ####
+censusData <- censusImport(states = states)
 
-## TODO:: CREATE FUNCTION TO ITERATE OVER STATES WITH THE DECLARED VARIABLES (variables_to_get)
+# EXPORT ALL STATES DATA ####
 
+# Export Tract to Zip Code Data
+dbWriteTable(con, 
+             "CENSUS.Dim_Tract_x_Zip",
+             tractData_, 
+             overwrite = TRUE, 
+             batch_rows = 1000)
 
-
+# Export Census Data
+dbWriteTable(con,
+             "CENSUS.Fact_Census",
+             censusData_,
+             overwrite = TRUE,
+             batch_rows = 1000)
